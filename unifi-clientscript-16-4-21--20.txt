@@ -1,0 +1,543 @@
+  //@liv-in-sky 2021  16.4.2021 17 20:30
+
+
+
+ //HIER WIRD PFAD UND FILENAME DEFINIERT
+ const path = "/htmlexample.html";                   //FIlenamen definieren
+ const home ='vis.0'                                 //wo soll das file im iobroker-file-system liegen ? (oder z.b auch iqontrol.meta)
+ let   braucheEinFile=false;                          // bei true wird ein file geschrieben
+ let   braucheEinVISWidget=true;                     // bei true wird ein html-tabelle in einen dp geschrieben - siehe nächste zeile
+ let dpVIS="0_userdata.0.Tabellen.Unifi-Clients"         //WICHTIG wenn "braucheEinVISWidget" auf true gesetzt !!  dp zusätzlich für VIS-HTML-Basic-Widget type Zeichenkette
+ let dpSort="0_userdata.0.Tabellen.Unifi-Clients-Sort"   //WICHTIG wenn braucheEinVISWidget auf true gesetzt !!  dp zusätzlich für VIS-HTML-Basic-Widget  type logic
+ let dpSortIPMAC="0_userdata.0.Tabellen.Unifi-MAC-IP"   //WICHTIG wenn braucheEinVISWidget auf true gesetzt !!  dp zusätzlich für VIS-HTML-Basic-Widget  type logic
+ let dpSortDevice="0_userdata.0.Tabellen.Unifi-Clients-Device"   //WICHTIG wenn braucheEinVISWidget auf true gesetzt !!  dp zusätzlich für VIS-HTML-Basic-Widget  type logic
+ let dpDelete="0_userdata.0.Tabellen.Unifi-Clients-DeleteDP"     //WICHTIG wenn "braucheEinVISWidget" auf true gesetzt !!  dp zusätzlich für VIS-HTML-Basic-Widget type Zeichenkette
+ let mySchedule="  */3 * * * * ";                       //jede minute  
+ let kuerzungNamen=15;                      // länge der namen kürzen
+ let offlineColor=true;                     // wenn true dann wird farbe von apName nicht beachtet
+ let offlineFarbe="#66b3ff"
+ let abwesendZeit=187200000                  // in millisekunden für länger abwesende clients
+ let htmlColorDeviceLangAbwesend="white"     // frbe überschrift für länger abwesende
+
+const apName = {  "b4:fb:e4:f3:96:63" : { aname: "AP-LongR" , afarbe: "#737373"},    // standard #BDBDBD   afarbe ist die farbe 
+                  "e0:63:da:b9:ec:2c" : { aname: "MySwitch" , afarbe: "#b3b300"},    // standard #BDBDBD
+                  "18:e8:29:56:40:e2" : { aname: "AP-Light" , afarbe: "#D8D8D8"}}    // standard #BDBDBD
+
+ let sortiereClient=false; // false ist nach IP; true nach Name
+ let satisfactionInsteadOnline=true;
+ 
+ let symbolSort="↔️"                //"👁️‍🗨️";
+ let symbolSortMAC="👁️‍🗨️";
+ let symbolSortDevice="👁️‍🗨️";
+ let symbolTrue="⚫";                       //  oder : ="❌"  ⚪  ⚫ ⭕  🔴 🔵 ⏱ 💀 👍 👎 📑 💲 👀 🔹
+ let symbolFalse="🔹";
+ let symbolDelete="del";
+ 
+ //---------------------------------------
+
+//HIER DIE SPALTEN ANZAHL DEFINIEREN - jede Spalte einen Wert - in diesem Beispiel sind es 4
+var htmlFeld1='Name';       var Feld1lAlign="left";                     // überschrift Tabellen Spalte1 und  Ausrichtung left,right or center
+var htmlFeld2='IP/MAC';        var Feld2lAlign="left";                      // überschrift Tabellen Spalte2 und  Ausrichtung left,right or center
+var htmlFeld3='Device';         var Feld3lAlign="left";                    // überschrift Tabellen Spalte3 und  Ausrichtung left,right or center
+var htmlFeld4='Online';        var Feld4lAlign="center";                    // überschrift Tabellen Spalte4 und  Ausrichtung left,right or center
+//-----------------------------------
+
+
+
+//ÜBERSCHRIFT ÜBER TABELLE
+let   htmlUberschrift=false;                           // mit Überschrift über der tabelle
+let   htmlSignature=false;                              // anstatt der Überscghrift eine signature: - kleiner - anliegend
+const htmlFeldUeber='Unifi Clients';              // Überschrift und Signature
+const htmlFarbUber="white";                         // Farbe der Überschrift
+const htmlSchriftWeite="normal";                       // bold, normal - Fettschrift für Überschrift
+const htmlÜberFontGroesse="18px";                       // schriftgröße überschrift
+//MEHRERE TABELLEN NEBENEINANDER
+let   mehrfachTabelle=2;                              // bis zu 4 Tabellen werden nebeneinander geschrieben-  verkürzt das Ganze, dafür etwas breiter - MÖGLICH 1,2,3,oder 4 !!!
+const trennungsLinie="2";                             //extra trennungslinie bei mehrfachtabellen - evtl auf 0 stellen, wnn htmlRahmenLinien auf none sind
+const farbetrennungsLinie="white";
+const htmlFarbZweiteTabelle="white";                // Farbe der Überschrift bei jeder 2.ten Tabelle
+const htmlFarbTableColorUber="#BDBDBD";               // Überschrift in der tabelle - der einzelnen Spalten
+//ÜBERSCHRIFT SPALTEN
+const UeberSchriftHöhe="35";                          //Überschrift bekommt mehr Raum - darunter und darüber - Zellenhöhe
+const LinieUnterUeberschrift="3";                   // Linie nur unter Spaltenüberschrift - 
+const farbeLinieUnterUeberschrift="white";
+const groesseUeberschrift=16;
+const UeberschriftStyle="normal"                     // möglich "bold"
+//GANZE TABELLE
+let abstandZelle="4";
+let farbeUngeradeZeilen="#000000";                     //Farbe für ungerade Zeilenanzahl - Hintergrund der Spaltenüberschrift bleibt bei htmlFarbTableColorGradient1/2
+let farbeGeradeZeilen="#151515";                        //Farbe für gerade Zeilenanzahl - Hintergrund der Spaltenüberschrift bleibt bei htmlFarbTableColorGradient1/2
+let weite="auto";                                     //Weite der Tabelle
+let zentriert=true;                                   //ganze tabelle zentriert
+const backgroundAll="#000000";                        //Hintergrund für die ganze Seite - für direkten aufruf oder iqontrol sichtber - keine auswirkung auf vis-widget
+const htmlSchriftart="Helvetica";
+const htmlSchriftgroesse="14px";
+//FELDER UND RAHMEN
+let   UeberschriftSpalten=true;                // ein- oder ausblenden der spatlen-überschriften
+const htmlFarbFelderschrift="#BDBDBD";                  // SchriftFarbe der Felder
+const htmlFarbFelderschrift2="#BDBDBD";                 // SchriftFarbe der Felder für jede 2te Tabelle   D8D8D8
+const htmlFarbTableColorGradient1="#424242";          //  Gradient - Hintergrund der Tabelle - Verlauffarbe
+const htmlFarbTableColorGradient2="#424242";          //  Gradient - Hintergrund der Tabelle - ist dieser Wert gleich Gradient1 gibt es keinen verlauf
+const htmlFarbTableBorderColor="grey";             // Farbe des Rahmen - is tdieser gleich den gradienten, sind die rahmen unsichtbar
+let htmlRahmenLinien="none";                            // Format für Rahmen: MÖGLICH: "none" oder "all" oder "cols" oder "rows"
+const htmlSpalte1Weite="auto";                   //  Weite der ersten beiden  Spalten oder z.b. 115px
+
+// HIER NICHTS  ÄNDERN
+
+let borderHelpBottum;
+let borderHelpRight;
+let htmlcenterHelp;
+let htmlcenterHelp2;
+
+if(htmlRahmenLinien=="rows") {borderHelpBottum=1;borderHelpRight=0;}
+if(htmlRahmenLinien=="cols") {borderHelpBottum=0;borderHelpRight=1;}
+if(htmlRahmenLinien=="none") {borderHelpBottum=0;borderHelpRight=0;}
+if(htmlRahmenLinien=="all")  {borderHelpBottum=1;borderHelpRight=1;}
+zentriert ? htmlcenterHelp="auto" : htmlcenterHelp="left";
+zentriert ? htmlcenterHelp2="center" : htmlcenterHelp2="left";
+
+
+const htmlZentriert='<center>'
+const htmlStart=    "<!DOCTYPE html><html lang=\"de\"><head><title>Vorlage</title><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">"+
+                  "<style> * {  margin: 0;} body {background-color: "+backgroundAll+"; margin: 0 auto;  }"+
+                  " p {padding-top: 10px; padding-bottom: 10px; text-align: "+htmlcenterHelp2+"}"+
+                 // " div { margin: 0 auto;  margin-left: auto; margin-right: auto;}"+
+                  " td { padding:"+abstandZelle+"px; border:0px solid "+htmlFarbTableBorderColor+";  border-right:"+borderHelpRight+"px solid "+htmlFarbTableBorderColor+";border-bottom:"+borderHelpBottum+"px solid "+htmlFarbTableBorderColor+";}"+ 
+                  " table { width: "+weite+";  margin: 0 "+htmlcenterHelp+"; border:1px solid "+htmlFarbTableBorderColor+"; border-spacing=\""+abstandZelle+"0px\" ; }"+   // margin macht center
+                  "td:nth-child(1) {width: "+htmlSpalte1Weite+"}"+"td:nth-child(2) {width:"+htmlSpalte1Weite+"}"+
+                  " </style></head><body> <div>";
+//const htmlUeber=    "<p style=\"color:"+htmlFarbUber+"; font-family:"+htmlSchriftart+"; font-weight: bold\">"+htmlFeldUeber+"</p>";                    
+const htmlTabStyle= "<table bordercolor=\""+htmlFarbTableBorderColor+"\" border=\"2px\" cellspacing=\""+abstandZelle+"\" cellpadding=\""+abstandZelle+"\" width=\""+weite+"\" rules=\""+htmlRahmenLinien+"\" style=\"color:"+htmlFarbFelderschrift+";  font-size:"+htmlSchriftgroesse+
+                     "; font-family:"+htmlSchriftart+";background-image: linear-gradient(42deg,"+htmlFarbTableColorGradient2+","+htmlFarbTableColorGradient1+");\">";
+const htmlTabUeber1="<tr height=\""+UeberSchriftHöhe+"\" style=\"color:"+htmlFarbTableColorUber+"; font-size: "+groesseUeberschrift+"px; font-weight: "+UeberschriftStyle+" ;  border-bottom: "+LinieUnterUeberschrift+"px solid "+farbeLinieUnterUeberschrift+" \">";
+const htmlTabUeber3="</tr>";
+
+
+
+
+//NICHTS ÄNDERN - abhängig von den oben definierten _Spalten - in diesem Beispiel sind es 4
+
+var buttonScript =  '<script> function setOnSort1() {	var Self = this; var objID =\''+dpSort+'\';	Self.servConn.getStates(\''+dpSort+'\', (error, states) => {  console.log(states); self.servConn.setState(\''+dpSort+'\', !states[\''+dpSort+'\'].val);}  )}'+
+                    'function setOnSort() {	var Self = this; var objID =\''+dpSortIPMAC+'\';	Self.servConn.getStates(\''+dpSortIPMAC+'\', (error, states) => {  console.log(states); self.servConn.setState(\''+dpSortIPMAC+'\', !states[\''+dpSortIPMAC+'\'].val);}  )}'+
+                    'function setOnSort2() {	var Self = this; var objID =\''+dpSortDevice +'\';	Self.servConn.getStates(\''+dpSortDevice+'\', (error, states) => {  console.log(states); self.servConn.setState(\''+dpSortDevice+'\', !states[\''+dpSortDevice+'\'].val);}  )}'+
+                    'function setOnDelete( myvalue ) {	 var Self = this; var objID = myvalue; console.log(myvalue); self.servConn.setState(\''+dpDelete+'\',myvalue)   }'+
+                       '</script>'
+
+var htmlTabUeber2="<td width="+htmlSpalte1Weite+" align="+Feld1lAlign+">&ensp;"+htmlFeld1+
+                     "&ensp;<button style\=\"border:none\; background-color\:transparent\; color\:white\; font\-size\:1em\; text\-align:left\" value=\"toggle\" onclick=\"setOnSort1\()\">"+symbolSort+"</button></td><td width="+htmlSpalte1Weite+" align="+Feld2lAlign+">&ensp;"+htmlFeld2+
+                     "&ensp;<button style\=\"border:none\; background-color\:transparent\; color\:white\; font\-size\:1em\; text\-align:left\" value=\"toggle\" onclick=\"setOnSort\()\">"+symbolSortMAC+"</button>"+"&ensp;</td><td  align="+Feld3lAlign+">&ensp;"+htmlFeld3+
+                     "&ensp;<button style\=\"border:none\; background-color\:transparent\; color\:white\; font\-size\:1em\; text\-align:left\" value=\"toggle\" onclick=\"setOnSort2\()\">"+symbolSortDevice+"</button>"+"&ensp;</td><td align="+Feld4lAlign+">&ensp;"+htmlFeld4+"&ensp;</td>";
+var htmlTabUeber2_1="<td width="+htmlSpalte1Weite+" align=="+Feld1lAlign+" style=\"color:"+htmlFarbZweiteTabelle+"\">&ensp;"+htmlFeld1+"&ensp;</td><td width="+htmlSpalte1Weite+"  align="+Feld2lAlign+" style=\"color:"+htmlFarbZweiteTabelle+"\">&ensp;"+htmlFeld2+
+                    "&ensp;</td><td  align=="+Feld3lAlign+" style=\"color:"+htmlFarbZweiteTabelle+"\">&ensp;"+htmlFeld3+"&ensp;</td><td  align="+Feld4lAlign+" style=\"color:"+htmlFarbZweiteTabelle+"\">&ensp;"+htmlFeld4+
+                    "&ensp;</td>";
+//------------------------------------------------------
+ //'function setOnDelete( myvalue ) {	var Self = this; var objID = myvalue;	Self.servConn.getStates(objID, (error, states) => {  console.log(states);  Self.servConn.setState(objID, !states[objID].val); }); }'+
+
+var htmlOut="";
+var mix;
+var counter;
+var val1; var val2; var val0; var val3;
+var htmlTabUeber="";
+var myReactionArr=[]
+
+function writeHTML(){
+ 
+ let myObj=[];
+ let myObjOlder=[];
+ myReactionArr=[]
+ let varhelp0; let varhelp1; let varhelp2; let varhelp3;let varhelp4;
+htmlOut="";
+
+
+
+counter=-1;
+htmlTabUeber="";
+switch (mehrfachTabelle) { 
+    case 1: htmlTabUeber=htmlTabUeber1+htmlTabUeber2+htmlTabUeber3;  break;
+    case 2: htmlTabUeber=htmlTabUeber1+htmlTabUeber2+htmlTabUeber2_1+htmlTabUeber3; break;
+    case 3: htmlTabUeber=htmlTabUeber1+htmlTabUeber2+htmlTabUeber2+htmlTabUeber2+htmlTabUeber3; break;
+    case 4: htmlTabUeber=htmlTabUeber1+htmlTabUeber2+htmlTabUeber2_1+htmlTabUeber2+htmlTabUeber2_1+htmlTabUeber3; break;
+}; 
+if (!UeberschriftSpalten) {htmlTabUeber=""} 
+
+ //--------------------------------------------------------------------------------------------------------------------------------------------------
+ //---------hier kommt eure schleife rein counter++, tabelleBind() und tabelleFinish() müssen so integriert bleiben !!!------------------------------
+ //---------alle valx werte müssen von euch bestimmt werden - val0,val1,val2,val3 !!!---------------------------------------------------------------------
+ //--------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+sortiereClient=getState(dpSort).val
+let zeigeMAC=getState(dpSortIPMAC).val
+let sortDevice=getState(dpSortDevice).val
+let jetzt=new Date().getTime();
+let help=[];
+//log("jetzt: "+jetzt.toString()+"  test : " + Date.parse('2020-07-04 17:27:42')) //ew Date('July 20, 69 00:20:18 GMT+00:00')
+$('unifi.0.default.clients.*.mac').each(function(id, i) {           // hier eigene schleife definieren
+         var ida = id.split('.');
+        if (existsState(id.replace("mac","ap_mac")) || existsState(id.replace("mac","sw_mac"))) {
+         //  counter++;                                       // SEHR WICHTIG - MUSS IN JEDER SCHLEIFE INTEGRIERT SEIN
+         //  log(ida[0]+"."+ida[1]+"."+ida[2]+"."+ida[3]+"."+ida[4])
+           varhelp0=getObject(ida[0]+"."+ida[1]+"."+ida[2]+"."+ida[3]+"."+ida[4]).common.name;
+           varhelp1=getState(id.replace("mac","ip")).val;
+           zeigeMAC ? varhelp1=getState(id.replace("mac","ip")).val : varhelp1=getState(id).val;
+           if (existsState(id.replace("mac","sw_mac"))) { varhelp2=getState(id.replace("mac","sw_mac")).val}
+           if (existsState(id.replace("mac","ap_mac"))) { varhelp2=getState(id.replace("mac","ap_mac")).val}
+         let farbehelp;
+         for(let device_name in apName) {                            //Abfrage welcher AP
+                      //   dlog(versuch[i].ap_mac +" - " + device_name +" - " + apName[device_name].aname); 
+                         if (varhelp2==device_name) {varhelp2 = apName[device_name].aname;farbehelp=apName[device_name].afarbe}}; 
+
+        
+           varhelp3=getState(id.replace("mac","is_online")).val;
+             if (existsState(id.replace("mac","satisfaction"))) {varhelp4=getState(id.replace("mac","satisfaction")).val+"%";} else {varhelp4}  
+           myReactionArr.push(id.replace("mac","is_online")); 
+        
+                 //  log(varhelp3)
+          if(existsState(id.replace("mac","last_seen_by_uap"))){
+          if(jetzt-Date.parse(getState(id.replace("mac","last_seen_by_uap")).val)>abwesendZeit) {     //
+                // log(" "+ getObject(ida[0]+"."+ida[1]+"."+ida[2]+"."+ida[3]+"."+ida[4]).common.name);
+               let varhelp2_2=jetzt-Date.parse(getState(id.replace("mac","last_seen_by_uap")).val)
+               varhelp2=Math.floor(((varhelp2_2/1000)/60/60/24)) +"d "+ Math.floor(((varhelp2_2/1000)/60/60) % 24) +"h "+ Math.floor( ((varhelp2_2/1000)/60) % 60 )+"m ";
+               let valButton=ida[0]+"."+ida[1]+"."+ida[2]+"."+ida[3]+"."+ida[4] //'unifi.0.default.clients.bc:54:51:eb:74:44'
+               varhelp3="<button style\=\"border:none\; background-color\:transparent\; color\:white\; font\-size\:1em\; text\-align:left\" value=\"toggle\" onclick=\"setOnDelete\(\'"+valButton+"\')\">"+symbolDelete+ "</button>" ;
+                 help=[varhelp0,varhelp1,varhelp2,varhelp3,farbehelp,varhelp4];
+                 myObjOlder.push(help) 
+                 } else{
+                     help=[varhelp0,varhelp1,varhelp2,varhelp3,farbehelp,varhelp4]; 
+                    myObj.push(help) 
+                 }
+         //  if (i==4) {log(getObject(ida[0]+"."+ida[1]+"."+ida[2]+"."+ida[3]+"."+ida[4]).common.name+" "+(jetzt-(getState(id.replace("mac","is_online")).lc)).toString()+"  ts : "+getState(id.replace("mac","is_online")).lc)}
+           }  //exists uap
+          else { 
+           help=[varhelp0,varhelp1,varhelp2,varhelp3,farbehelp,varhelp4]; 
+          myObj.push(help)   }            
+                                   
+  
+      }   //  abfrage ap_mac
+     }); //Schleifen Ende - je nach schleifenart muss hier etwas geändert werden !!!!!!!!!
+
+     if (sortiereClient){ 
+
+         myObj.sort(function (alpha, beta) {
+             if (alpha[0].toUpperCase().trim() > beta[0].toUpperCase().trim())
+                return 1;
+             if (beta[0].toUpperCase().trim() > alpha[0].toUpperCase().trim())
+                return -1;
+             return 0;
+            });} else {  
+
+            myObj.sort(function (alpha, beta) {
+                if ((parseFloat(beta[1].replace(/.+\.(.+)$/,"$1")))+(parseFloat(beta[1].replace(/.+\.(.+)\..+$/,"$1"))*1000) > (parseFloat(alpha[1].replace(/.+\.(.+)$/,"$1")))+(parseFloat(alpha[1].replace(/.+\.(.+)\..+$/,"$1"))*1000))
+                    return -1;
+                if ((parseFloat(alpha[1].replace(/.+\.(.+)$/,"$1")))+(parseFloat(alpha[1].replace(/.+\.(.+)\..+$/,"$1"))*1000) > (parseFloat(beta[1].replace(/.+\.(.+)$/,"$1")))+(parseFloat(beta[1].replace(/.+\.(.+)\..+$/,"$1"))*1000))
+                    return 1;
+             return 0;
+            });  
+            }
+        if (sortDevice){
+            myObj.sort(function (alpha, beta) {
+             if (alpha[2].toUpperCase().trim() > beta[2].toUpperCase().trim())
+                return 1;
+             if (beta[2].toUpperCase().trim() > alpha[2].toUpperCase().trim())
+                return -1;
+             return 0;
+            });
+            setStateDelayed(dpSortDevice,false,2500);
+            } 
+
+       for(var i=0;i<myObj.length;i++) {
+                
+                counter++
+                if (!offlineColor) {
+                val0=myObj[i][0] ;  if (val0.length>=(kuerzungNamen)+2)  val0=val0.substring(0,kuerzungNamen)+" ..." ; val0="<font color=\""+myObj[i][4]+"\">"+val0
+                val1=myObj[i][1] ;  val1="<font color=\""+myObj[i][4]+"\">"+val1
+                val2=myObj[i][2] ;  val2="<font color=\""+myObj[i][4]+"\">"+val2
+                val3=myObj[i][3] ;  if (!val3) {val3=symbolFalse} else{val3=satisfactionInsteadOnline ? val3=myObj[i][5] : val3=symbolTrue;}   //val3="<font color=\""+myObj[i][4]+"\">"+val3
+                                   } else {
+                                      // log(val3)
+                                       val3=myObj[i][3] 
+                                       val0=myObj[i][0] ;  if (val0.length>=(kuerzungNamen)+2)  val0=val0.substring(0,kuerzungNamen)+" ..." ;
+                                        if (val3==false) val0="<font color=\""+offlineFarbe+"\">"+val0
+                                       val1=myObj[i][1] ;  if (val3==false) val1="<font color=\""+offlineFarbe+"\">"+val1
+                                       val2=myObj[i][2] ;  if (val3==false) val2="<font color=\""+offlineFarbe+"\">"+val2
+                                      // val3=myObj[i][3] ;  
+                                      if (!val3) {val3=symbolFalse} else{satisfactionInsteadOnline ? val3=myObj[i][5] : val3=symbolTrue; /*log(val3)*/}
+                                   }
+         
+    
+      tabelleBind(); //HIER NICHTS ÄNDERN : HIER WERDEN DIE DATEN DER SCHLEIFE ZUSAMMENGESETZT  - diese function muss als letztes in der eigenen schleife aufgerufen werden
+     
+       } // log(counter.toString())
+
+      // log(counter.toString())
+      tabelleMachSchoen()
+       counter=-1;
+       for(var i=0;i<mehrfachTabelle;i++ ) {
+                  if(i==0){val0="<font color=\""+htmlColorDeviceLangAbwesend+"\"><b><i>Abwesend</i></b>";
+                           val1="<font color=\""+htmlColorDeviceLangAbwesend+"\"><i>über: "+Math.floor(((abwesendZeit/1000)/60/60/24)) +"d "+ Math.floor(((abwesendZeit/1000)/60/60) % 24) +"h "+ Math.floor( ((abwesendZeit/1000)/60) % 60 )+"m "+"</i></b>";
+                         //  val1=Math.floor( ((abwesendZeit/1000)/60/60/24) )+"d "+ Math.floor(((abwesendZeit/1000)/60/60) % 24) +"h "+ Math.floor( ((abwesendZeit/1000)/60) % 60 )+" m"
+                         //  val2="<font color=\""+htmlColorDeviceLangAbwesend+"\"><i>um "+formatDate(getDateObject((parseFloat((new Date().getTime())))), "SS:mm:ss")+"</i>";
+                  } else{val0=""; val1=""; }
+                   val2=""; val3="";counter++;tabelleBind();
+              } 
+
+      // val0="Lange Abwesend";
+      // val1="";val2="";val3="";
+      
+       myObjOlder.sort(function (alpha, beta) {
+             if (alpha[0].toUpperCase().trim() > beta[0].toUpperCase().trim())
+                return 1;
+             if (beta[0].toUpperCase().trim() > alpha[0].toUpperCase().trim())
+                return -1;
+             return 0;
+            });
+
+       
+         counter=-1;
+                for(var i=0;i<myObjOlder.length;i++) {
+                
+                counter++
+                if (!offlineColor) {
+                val0=myObjOlder[i][0] ;  if (val0.length>=(kuerzungNamen)+2)  val0=val0.substring(0,kuerzungNamen)+" ..." ; val0="<font color=\""+myObjOlder[i][4]+"\">"+val0
+                val1=myObjOlder[i][1] ;  val1="<font color=\""+myObjOlder[i][4]+"\">"+val1
+                val2=myObjOlder[i][2] ;  val2="<font color=\""+myObjOlder[i][4]+"\">"+val2
+                val3=myObjOlder[i][3] ;  //if (!val3) {val3=symbolFalse} else{val3=symbolTrue}   //val3="<font color=\""+myObj[i][4]+"\">"+val3
+                                   } else {
+                                      // log(val3)
+                                       val3=myObjOlder[i][3] 
+                                       val0=myObjOlder[i][0] ;  if (val0.length>=(kuerzungNamen)+2)  val0=val0.substring(0,kuerzungNamen)+" ..." ; if (val3==false) val0="<font color=\""+offlineFarbe+"\">"+val0
+                                       val1=myObjOlder[i][1] ;  if (val3==false) val1="<font color=\""+offlineFarbe+"\">"+val1
+                                       val2=myObjOlder[i][2] ;  if (val3==false) val2="<font color=\""+offlineFarbe+"\">"+val2
+                                      // val3=myObj[i][3] ;  
+                                     // if (!val3) {val3=symbolFalse} else{val3=symbolTrue}
+                                   }
+         
+    
+      tabelleBind(); //HIER NICHTS ÄNDERN : HIER WERDEN DIE DATEN DER SCHLEIFE ZUSAMMENGESETZT  - diese function muss als letztes in der eigenen schleife aufgerufen werden
+
+   
+     
+       } // log(counter.toString())
+       
+  counter++
+     val0="<font color=\""+htmlColorDeviceLangAbwesend+"\"><b><i>Last Update</i></b>";
+     val1="<font color=\""+htmlColorDeviceLangAbwesend+"\"><i>um "+formatDate(getDateObject((parseFloat((new Date().getTime())))), "SS:mm:ss")+"</i>";
+     val2="";val3=""
+     tabelleBind()
+   
+ //-------------------------------------------------------------------------------------------------------------------------------------------------
+ //--------------------------------------------------Ende der schleife------------------------------------------------------------------------------
+ //-------------------------------------------------------------------------------------------------------------------------------------------------
+
+       tabelleFinish(); // AB HIER NICHTS ÄNDERN - tabelle fertigstellen
+      
+} // function ende
+ 
+ //MAIN:
+
+  
+ schedule(mySchedule,  function () {
+  writeHTML();
+  if (braucheEinFile) {writeFile(home, path ,htmlOut, function (error) { /* log('file written');*/  });}
+ }); 
+ writeHTML();
+ 
+
+ function tabelleBind(){
+      //HIER WERDEN DIE DATEN DER SCHLEIFE ZUSAMMENGESETZT - hat man oben 4 Felder definiert, braucht man hier 4 Werte 
+    
+        switch (mehrfachTabelle) {  
+         case 1:  if(counter%2==0){  htmlOut=htmlOut+"<tr bgcolor=\""+farbeGeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td></tr>"; break;} else
+                                  {  htmlOut=htmlOut+"<tr bgcolor=\""+farbeUngeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td></tr>"; break;}
+         case 2: if(counter%4==0){ 
+                  if(counter%2==0)  {htmlOut = htmlOut+"<tr bgcolor=\""+farbeGeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+
+                                     ";\"align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>"; } 
+                               else {htmlOut = htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td  align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td></tr>";} break;
+                     }else{
+                  if(counter%2==0)  {htmlOut = htmlOut+"<tr bgcolor=\""+farbeUngeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+
+                                     ";\" align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>"; } 
+                               else {htmlOut = htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td  align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td></tr>";} break;}                  
+         case 3:  if(counter%2==0)   {
+                   if(counter%3==0 )  {htmlOut = htmlOut+"<tr bgcolor=\""+farbeGeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+
+                                                         ";\" align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>"; } 
+                               else { if(counter%3==1 )  { htmlOut = htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td  align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\"border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+
+                                                         ";color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td>";} 
+                                                else    {htmlOut = htmlOut+"<td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td></tr>";}
+                                          } break;}else{
+                   if(counter%3==0 )  {htmlOut = htmlOut+"<tr bgcolor=\""+farbeUngeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+
+                                                         ";\" align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>"; } 
+                               else { if(counter%3==1 )  { htmlOut = htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td  align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\"border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+
+                                                         ";color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td>";} 
+                                                else    {htmlOut = htmlOut+"<td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td></tr>";}
+                                          } break;}
+
+         case 4:  if(counter%8==0)   {
+                  if(counter%4==0)  {htmlOut = htmlOut+"<tr bgcolor=\""+farbeGeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+ ";\" align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>"; } 
+                                   else {if(counter%4==1 )  { htmlOut = htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td  align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"; color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td>";} 
+                                                else    {if(counter%4==3)  { htmlOut= htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\"&ensp;>"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+" style=\"border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+";color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\"border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+ "color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td></tr>";} 
+                                                                  else    {htmlOut  = htmlOut+"<td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td  style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+";\"align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>";}}
+                                          } break;}else{
+                  if(counter%4==0)   {htmlOut = htmlOut+"<tr bgcolor=\""+farbeUngeradeZeilen+"\"><td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+ ";\" align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>"; } 
+                                   else {if(counter%4==1 )  { htmlOut = htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td  align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+" style=\"border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+ ";color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td>";} 
+                                                else    {if(counter%4==3)  { htmlOut= htmlOut+"<td align="+Feld1lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\"&ensp;>"+val0+"&ensp;</td><td  align="+Feld2lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+" style=\"color:"+htmlFarbFelderschrift2+"\">&ensp;"+val2+"&ensp;</td><td  align="+Feld4lAlign+"  color:"+htmlFarbFelderschrift2+"\">&ensp;"+val3+"&ensp;</td></tr>";} 
+                                                                  else    {htmlOut = htmlOut+"<td align="+Feld1lAlign+">&ensp;"+val0+"&ensp;</td><td align="+Feld2lAlign+">&ensp;"+val1+"&ensp;</td><td align="+Feld3lAlign+">&ensp;"+val2+"&ensp;</td><td  style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+";\"align="+Feld4lAlign+">&ensp;"+val3+"&ensp;</td>";}}
+                                          } break;     }                   
+
+      } //switch ende
+
+ }
+ 
+ function tabelleMachSchoen() {
+
+      // tabelle fertigstellen
+
+
+        switch (mehrfachTabelle) {  
+        case 1:    break;
+
+        case 2:    
+                   if(counter%2==0)  htmlOut = htmlOut.replace(/<\/td>$/, '</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>');   
+                 
+                   break;
+
+        case 3:   if(counter%3==2)  htmlOut = htmlOut.replace(/<\/td>$/, "</td></tr>");
+                  if(counter%3==1)  htmlOut = htmlOut.replace(/<\/td>$/, '</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>');      
+                  if(counter%3==0)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");
+                
+                   break;
+        case 4:   if(counter%4==3) { log(htmlOut); htmlOut = htmlOut.replace(/<\/td>$/, "</td></tr>"); log(htmlOut)}
+                  if(counter%4==2)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");
+                  if(counter%4==1)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");    
+                  if(counter%4==0)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");      
+                  break; }
+ }
+
+
+ function tabelleFinish() {
+
+      // tabelle fertigstellen
+
+
+        switch (mehrfachTabelle) {  
+        case 1:    break;
+
+        case 2:    
+                   if(counter%2==0)  htmlOut = htmlOut.replace(/<\/td>$/, '</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>');   
+                 
+                   break;
+
+        case 3:   if(counter%3==2)  htmlOut = htmlOut.replace(/<\/td>$/, "</td></tr>");
+                  if(counter%3==1)  htmlOut = htmlOut.replace(/<\/td>$/, '</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>');      
+                  if(counter%3==0)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");
+                
+                   break;
+        case 4:   if(counter%4==3) { log(htmlOut); htmlOut = htmlOut.replace(/<\/td>$/, "</td></tr>"); log(htmlOut)}
+                  if(counter%4==2)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");
+                  if(counter%4==1)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");    
+                  if(counter%4==0)  htmlOut = htmlOut.replace(/<\/td>$/, "</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td style=\" border-right: "+trennungsLinie+"px solid "+farbetrennungsLinie+"\">&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td><td>&ensp;</td></tr>");      
+                  break; } 
+
+
+          var htmlUeber=    "<p style=\"color:"+htmlFarbUber+"; font-family:"+htmlSchriftart+"; font-size: "+htmlÜberFontGroesse+"; font-weight:"+htmlSchriftWeite+ "\">"+htmlFeldUeber+"&ensp;&ensp;Last Update: "+formatDate(getDateObject((new Date().getTime())), "SS:mm:ss");+"</p>"; 
+        var htmlUnter= "<div  style=\"color:"+htmlFarbUber+"; font-family:"+htmlSchriftart+"; font-size: 70%; text-align: right;\" >"+htmlFeldUeber+"&ensp;&ensp;Last Update: "+formatDate(getDateObject((new Date().getTime())), "SS:mm:ss")+"</div>";
+         
+         if (!htmlSignature) htmlUnter="";
+           //Ausgabe über VIS html widget - tabelle in datenpunkt schreiben - html tabelle ohne html header und body
+            var htmlOutVIS="";
+          //  htmlUberschrift ? htmlOutVIS=htmlUeber+htmlTabStyle+htmlTabUeber+htmlOut+"</table>" : htmlOutVIS=htmlTabStyle+htmlTabUeber+htmlOut+"</table>";
+             if (htmlUberschrift) 
+                 { zentriert ? htmlOutVIS=htmlZentriert+htmlUeber+htmlTabStyle+htmlTabUeber+htmlOut+"</table>"+htmlUnter+ buttonScript : htmlOutVIS=htmlUeber+htmlTabStyle+htmlTabUeber+htmlOut+"</table>"+htmlUnter+ buttonScript ;
+
+               } else {
+                zentriert ?  htmlOutVIS=htmlZentriert+htmlTabStyle+htmlTabUeber+htmlOut+"</table>"+htmlUnter+ buttonScript :  htmlOutVIS=htmlTabStyle+htmlTabUeber+htmlOut+"</table>"+htmlUnter+ buttonScript;
+
+                  }
+
+   // log("bin raus aus tabelleBind");
+            if (braucheEinVISWidget) setState(dpVIS, htmlOutVIS );
+
+  var htmlUnter= "<div  style=\"color:"+htmlFarbUber+"; font-family:"+htmlSchriftart+"; font-size: 80%;  text-align: center; \" >"+htmlFeldUeber+"&ensp;&ensp;Last Update: "+formatDate(getDateObject((parseFloat((new Date().getTime())))), "SS:mm:ss");+"</div>"
+ 
+  if (!htmlSignature) htmlUnter="";
+  var htmlEnd="</table>"+htmlUnter+"</div></body>";
+  //mit oder ohne überschrift - zentriert oder links
+ htmlUberschrift ? htmlOut=htmlStart+htmlUeber+htmlTabStyle+htmlTabUeber+htmlOut+htmlEnd : htmlOut=htmlStart+htmlTabStyle+htmlTabUeber+htmlOut+htmlEnd;
+  //log(htmlOut);
+
+
+ }
+
+ on({id: dpSort, change: "any"}, function (obj) { 
+    
+       
+        var timeout2 = setTimeout(function () {
+          
+    writeHTML(); 
+    
+    }, 1500);
+       // }
+    
+    });
+ on({id: dpSortIPMAC, change: "any"}, function (obj) { 
+    
+       
+        var timeout2 = setTimeout(function () {
+          
+    writeHTML(); 
+    
+    }, 1500);
+       // }
+    
+    });
+
+ on({id: dpSortDevice , val: true}, function (obj) { 
+    
+       
+        var timeout2 = setTimeout(function () {
+          
+    writeHTML(); 
+    
+    }, 1500);
+       // }
+    
+    });
+
+
+ on({id: myReactionArr, change: "any"}, function (obj) { 
+    //log("bin da","error")
+     writeHTML();
+     if (braucheEinFile) {writeFile(home, path ,htmlOut, function (error) { /* log('file written');*/  });}
+ 
+      
+    });
+
+
+//  LÖSCHE alte Datenpunkte
+ on({id: dpDelete , change: "any"}, function (obj) { 
+     
+     deleteMydp(getState(dpDelete).val)
+
+       
+        var timeout2 = setTimeout(function () {
+          
+    writeHTML(); 
+    
+    }, 3000);
+       // }
+    
+    })
+
+function deleteMydp (myID) {
+    var obj = getObject("system.adapter.unifi.0");
+obj.common.enabled = false;  // Adapter ausschalten
+setObject("system.adapter.unifi.0", obj);
+
+
+deleteObject(myID, true);
+
+var obj = getObject("system.adapter.unifi.0");
+obj.common.enabled = true;  // Adapter ausschalten
+setObject("system.adapter.unifi.0", obj);
+
+
+}
+
